@@ -70,7 +70,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    const TIMEOUT = 1 * 60 * 1000; // change to 10 mins later
+    const TIMEOUT = 10 * 60 * 1000; // for testing set it to 1 minute 
 
     let lastActivityTime = Date.now();
 
