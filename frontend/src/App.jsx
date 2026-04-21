@@ -28,6 +28,9 @@ export default function App() {
   const [total, setTotal] = useState(0);
   const [byCategory, setByCategory] = useState({});
 
+  // ✅ NEW: session modal state
+  const [sessionExpired, setSessionExpired] = useState(false);
+
   useEffect(() => {
     const u = getCurrentUser();
     if (u) {
@@ -61,6 +64,52 @@ export default function App() {
       fetchExpenses();
       fetchBudgets();
     }
+  }, [user]);
+
+  // ✅ SESSION TIMEOUT (SAFE)
+  useEffect(() => {
+    if (!user) return;
+
+    const TIMEOUT = 1 * 60 * 1000; // change to 10 mins later
+
+    let lastActivityTime = Date.now();
+
+    const logoutUser = () => {
+      setSessionExpired(true);
+    };
+
+    const checkTimeout = () => {
+      const now = Date.now();
+      if (now - lastActivityTime > TIMEOUT) {
+        logoutUser();
+      }
+    };
+
+    const resetTimer = () => {
+      lastActivityTime = Date.now();
+    };
+
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+    window.addEventListener("click", resetTimer);
+
+    const interval = setInterval(checkTimeout, 60000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        checkTimeout();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("click", resetTimer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [user]);
 
   const addExpense = async () => {
@@ -171,6 +220,24 @@ export default function App() {
 
   return (
     <div className="app">
+
+      {sessionExpired && (
+        <div className="session-overlay">
+          <div className="session-modal">
+            <h2>⏳ Session Expired</h2>
+            <p>Your session expired. Sign in to continue.</p>
+            <button
+              onClick={() => {
+                logout();
+                window.location.reload();
+              }}
+            >
+              Sign In Again
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="sidebar">
         <div className="logo">
           Paisa<span>Track</span>
