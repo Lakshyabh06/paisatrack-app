@@ -28,7 +28,6 @@ export default function App() {
   const [total, setTotal] = useState(0);
   const [byCategory, setByCategory] = useState({});
 
-  // ✅ NEW: session modal state
   const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
@@ -66,12 +65,11 @@ export default function App() {
     }
   }, [user]);
 
-  // ✅ SESSION TIMEOUT (SAFE)
+  // ✅ SESSION TIMEOUT
   useEffect(() => {
     if (!user) return;
 
-    const TIMEOUT = 10 * 60 * 1000; // for testing set it to 1 minute 
-
+    const TIMEOUT = 1 * 60 * 1000; 
     let lastActivityTime = Date.now();
 
     const logoutUser = () => {
@@ -332,22 +330,27 @@ export default function App() {
             <div className="card">
               <div className="card-title">Spending by category</div>
 
-              {Object.entries(byCategory).map(([cat, amt]) => {
-                const percent = (amt / total) * 100;
+              {["Food & Drinks","Transport","Shopping","Health","Entertainment","Others"]
+                .map((cat) => {
+                  const amt = byCategory[cat] || 0;
+                  if (amt === 0) return null;
 
-                return (
-                  <div key={cat} className="bar-row">
-                    <div className="bar-label">
-                      <span className="dot" style={{ background: getColor(cat) }}></span>
-                      {cat}
+                  const budget = budgets.find(b => b.category === cat)?.monthly_limit || 0;
+                  const percent = budget ? Math.min((amt / budget) * 100, 100) : 0;
+
+                  return (
+                    <div key={cat} className="bar-row">
+                      <div className="bar-label">
+                        <span className="dot" style={{ background: getColor(cat) }}></span>
+                        {cat}
+                      </div>
+                      <div className="bar">
+                        <div className="fill" style={{ width: `${percent}%`, background: getColor(cat) }}></div>
+                      </div>
+                      <div>₹{amt}</div>
                     </div>
-                    <div className="bar">
-                      <div className="fill" style={{ width: `${percent}%`, background: getColor(cat) }}></div>
-                    </div>
-                    <div>₹{amt}</div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
 
             <div className="card">
@@ -368,15 +371,17 @@ export default function App() {
             <div className="card">
               <div className="card-title">Budget tracker</div>
 
-              {budgets
-                .filter((b) => b.category !== "TOTAL")
-                .map((b) => {
-                  const spent = byCategory[b.category] || 0;
+              {["Food & Drinks","Transport","Shopping","Health","Entertainment","Others"]
+                .map((cat) => {
+                  const b = budgets.find((b) => b.category === cat);
+                  if (!b) return null;
+
+                  const spent = byCategory[cat] || 0;
                   const percent = Math.min((spent / b.monthly_limit) * 100, 100);
 
                   return (
-                    <div key={b.category} className="bar-row">
-                      <div>{b.category}</div>
+                    <div key={cat} className="bar-row">
+                      <div>{cat}</div>
                       <div className="bar">
                         <div
                           className="fill"
@@ -395,7 +400,7 @@ export default function App() {
             <div className="card">
               <div className="card-title">Recent transactions</div>
 
-              {expenses.slice(0, 6).map((e) => (
+              {[...expenses].reverse().slice(0, 6).map((e) => (
                 <div key={e.expense_id} className="recent-row">
                   <span className="dot" style={{ background: getColor(e.category) }}></span>
 
@@ -407,40 +412,18 @@ export default function App() {
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: "140px", justifyContent: "flex-end" }}>
                     <span>₹{e.amount}</span>
 
-                    <button
-                      onClick={() => handleEdit(e)}
-                      style={{
-                        background: "#3b82f6",
-                        color: "#fff",
-                        border: "none",
-                        padding: "3px 6px",
-                        borderRadius: "5px",
-                        fontSize: "11px",
-                        cursor: "pointer",
-                      }}
-                    >
+                    <button onClick={() => handleEdit(e)} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "3px 6px", borderRadius: "5px", fontSize: "11px", cursor: "pointer" }}>
                       Edit
                     </button>
 
-                    <button
-                      onClick={() => handleDelete(e.expense_id)}
-                      style={{
-                        background: "#ef4444",
-                        color: "#fff",
-                        border: "none",
-                        padding: "3px 8px",
-                        borderRadius: "5px",
-                        fontSize: "11px",
-                        cursor: "pointer",
-                        minWidth: "60px",
-                      }}
-                    >
+                    <button onClick={() => handleDelete(e.expense_id)} style={{ background: "#ef4444", color: "#fff", border: "none", padding: "3px 8px", borderRadius: "5px", fontSize: "11px", cursor: "pointer", minWidth: "60px" }}>
                       Delete
                     </button>
                   </div>
                 </div>
               ))}
             </div>
+
           </div>
         </div>
       </div>
