@@ -69,7 +69,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    const TIMEOUT = 1 * 60 * 1000; 
+    const TIMEOUT = 10* 60 * 1000; 
     let lastActivityTime = Date.now();
 
     const logoutUser = () => {
