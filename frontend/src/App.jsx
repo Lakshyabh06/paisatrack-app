@@ -10,24 +10,21 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import Reports from "./Reports";
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
 export default function App() {
   const [user, setUser] = useState(null);
-
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState([]);
-
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Food & Drinks");
-
+  const [page, setPage] = useState("dashboard");
   const [budgetAmount, setBudgetAmount] = useState("");
-
   const [total, setTotal] = useState(0);
   const [byCategory, setByCategory] = useState({});
-
   const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
@@ -45,7 +42,6 @@ export default function App() {
       `${API}/expenses?user_id=${user.username}&month_year=2026-04`
     );
     const data = await res.json();
-
     setExpenses(data.expenses || []);
     setTotal(data.total || 0);
     setByCategory(data.by_category || {});
@@ -54,7 +50,6 @@ export default function App() {
   const fetchBudgets = async () => {
     const res = await fetch(`${API}/budgets?user_id=${user.username}`);
     const data = await res.json();
-
     setBudgets(data.budgets || []);
   };
 
@@ -65,27 +60,19 @@ export default function App() {
     }
   }, [user]);
 
-  // ✅ SESSION TIMEOUT
   useEffect(() => {
     if (!user) return;
 
-    const TIMEOUT = 10* 60 * 1000; 
+    const TIMEOUT = 10 * 60 * 1000;
     let lastActivityTime = Date.now();
 
-    const logoutUser = () => {
-      setSessionExpired(true);
-    };
+    const logoutUser = () => setSessionExpired(true);
 
     const checkTimeout = () => {
-      const now = Date.now();
-      if (now - lastActivityTime > TIMEOUT) {
-        logoutUser();
-      }
+      if (Date.now() - lastActivityTime > TIMEOUT) logoutUser();
     };
 
-    const resetTimer = () => {
-      lastActivityTime = Date.now();
-    };
+    const resetTimer = () => (lastActivityTime = Date.now());
 
     window.addEventListener("mousemove", resetTimer);
     window.addEventListener("keydown", resetTimer);
@@ -94,9 +81,7 @@ export default function App() {
     const interval = setInterval(checkTimeout, 60000);
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        checkTimeout();
-      }
+      if (document.visibilityState === "visible") checkTimeout();
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
@@ -128,6 +113,7 @@ export default function App() {
     setName("");
     setAmount("");
     fetchExpenses();
+    window.dispatchEvent(new Event("expenseUpdated"));
   };
 
   const addBudget = async () => {
@@ -156,8 +142,9 @@ export default function App() {
         method: "DELETE",
       });
       fetchExpenses();
+      window.dispatchEvent(new Event("expenseUpdated"));
     } catch (err) {
-      console.log("Delete error:", err);
+      console.log(err);
     }
   };
 
@@ -179,8 +166,9 @@ export default function App() {
         }
       );
       fetchExpenses();
+      window.dispatchEvent(new Event("expenseUpdated"));
     } catch (err) {
-      console.log("Edit error:", err);
+      console.log(err);
     }
   };
 
@@ -218,7 +206,6 @@ export default function App() {
 
   return (
     <div className="app">
-
       {sessionExpired && (
         <div className="session-overlay">
           <div className="session-modal">
@@ -240,192 +227,212 @@ export default function App() {
         <div className="logo">
           Paisa<span>Track</span>
         </div>
-        <div className="menu active">Dashboard</div>
+
+        <div
+          className={`menu ${page === "dashboard" ? "active" : ""}`}
+          onClick={() => setPage("dashboard")}
+        >
+          Dashboard
+        </div>
+
         <div className="menu">Expenses</div>
         <div className="menu">Budgets</div>
-        <div className="menu">Reports</div>
+
+        <div
+          className={`menu ${page === "reports" ? "active" : ""}`}
+          onClick={() => setPage("reports")}
+        >
+          Reports
+        </div>
+
         <div className="menu">Settings</div>
       </div>
 
       <div className="main">
-        <div className="topbar">
-          <h1>Dashboard</h1>
+        {page === "reports" ? (
+          <Reports user={user} />
+        ) : (
+          <>
+            <div className="topbar">
+              <h1>Dashboard</h1>
 
-          <div style={{ marginLeft: "auto", display: "flex", gap: "10px" }}>
-            <button
-              onClick={() => {
-                logout();
-                window.location.reload();
-              }}
-              style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                padding: "8px 14px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "500",
-              }}
-            >
-              Logout
-            </button>
+              <div style={{ marginLeft: "auto", display: "flex", gap: "10px" }}>
+                <button
+                  onClick={() => {
+                    logout();
+                    window.location.reload();
+                  }}
+                  style={{
+                    background: "#ef4444",
+                    color: "#fff",
+                    border: "none",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
+                >
+                  Logout
+                </button>
 
-            <button className="add-btn">+ Add expense</button>
-          </div>
-        </div>
-
-        <div className="stats">
-          <div className="card">
-            <div>Total spent</div>
-            <h2 style={{ color: "#dc2626" }}>₹{total}</h2>
-          </div>
-
-          <div className="card">
-            <div>Remaining</div>
-            <h2 style={{ color: remaining < 0 ? "#dc2626" : "#16a34a" }}>
-              ₹{remaining}
-            </h2>
-          </div>
-
-          <div className="card">
-            <div>Daily average</div>
-            <h2>₹{dailyAvg.toFixed(0)}</h2>
-          </div>
-
-          <div className="card">
-            <div>Transactions</div>
-            <h2>{expenses.length}</h2>
-          </div>
-        </div>
-
-        <div className="quick-form">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="What did you spend on?" />
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="₹ Amount" />
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option>Food & Drinks</option>
-            <option>Transport</option>
-            <option>Shopping</option>
-            <option>Health</option>
-            <option>Entertainment</option>
-            <option>Others</option>
-          </select>
-          <button onClick={addExpense}>Add</button>
-        </div>
-
-        <div className="quick-form" style={{ marginTop: "10px" }}>
-          <input type="number" value={budgetAmount} onChange={(e) => setBudgetAmount(e.target.value)} placeholder="Set monthly budget ₹" />
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option>Food & Drinks</option>
-            <option>Transport</option>
-            <option>Shopping</option>
-            <option>Health</option>
-            <option>Entertainment</option>
-            <option>Others</option>
-          </select>
-          <button onClick={addBudget}>Set Budget</button>
-        </div>
-
-        <div className="grid">
-          <div>
-            <div className="card">
-              <div className="card-title">Spending by category</div>
-
-              {["Food & Drinks","Transport","Shopping","Health","Entertainment","Others"]
-                .map((cat) => {
-                  const amt = byCategory[cat] || 0;
-                  if (amt === 0) return null;
-
-                  const budget = budgets.find(b => b.category === cat)?.monthly_limit || 0;
-                  const percent = budget ? Math.min((amt / budget) * 100, 100) : 0;
-
-                  return (
-                    <div key={cat} className="bar-row">
-                      <div className="bar-label">
-                        <span className="dot" style={{ background: getColor(cat) }}></span>
-                        {cat}
-                      </div>
-                      <div className="bar">
-                        <div className="fill" style={{ width: `${percent}%`, background: getColor(cat) }}></div>
-                      </div>
-                      <div>₹{amt}</div>
-                    </div>
-                  );
-                })}
+                <button className="add-btn">+ Add expense</button>
+              </div>
             </div>
 
-            <div className="card">
-              <div className="card-title">Weekly spending trend</div>
+            <div className="stats">
+              <div className="card">
+                <div>Total spent</div>
+                <h2 style={{ color: "#dc2626" }}>₹{total}</h2>
+              </div>
 
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={weeklyData}>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="#16a34a" strokeWidth={3} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+              <div className="card">
+                <div>Remaining</div>
+                <h2 style={{ color: remaining < 0 ? "#dc2626" : "#16a34a" }}>
+                  ₹{remaining}
+                </h2>
+              </div>
 
-          <div>
-            <div className="card">
-              <div className="card-title">Budget tracker</div>
+              <div className="card">
+                <div>Daily average</div>
+                <h2>₹{dailyAvg.toFixed(0)}</h2>
+              </div>
 
-              {["Food & Drinks","Transport","Shopping","Health","Entertainment","Others"]
-                .map((cat) => {
-                  const b = budgets.find((b) => b.category === cat);
-                  if (!b) return null;
-
-                  const spent = byCategory[cat] || 0;
-                  const percent = Math.min((spent / b.monthly_limit) * 100, 100);
-
-                  return (
-                    <div key={cat} className="bar-row">
-                      <div>{cat}</div>
-                      <div className="bar">
-                        <div
-                          className="fill"
-                          style={{
-                            width: `${percent}%`,
-                            background: getBudgetColor(spent, b.monthly_limit),
-                          }}
-                        ></div>
-                      </div>
-                      <div>₹{spent} / ₹{b.monthly_limit}</div>
-                    </div>
-                  );
-                })}
+              <div className="card">
+                <div>Transactions</div>
+                <h2>{expenses.length}</h2>
+              </div>
             </div>
 
-            <div className="card">
-              <div className="card-title">Recent transactions</div>
+            <div className="quick-form">
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="What did you spend on?" />
+              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="₹ Amount" />
+              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option>Food & Drinks</option>
+                <option>Transport</option>
+                <option>Shopping</option>
+                <option>Health</option>
+                <option>Entertainment</option>
+                <option>Others</option>
+              </select>
+              <button onClick={addExpense}>Add</button>
+            </div>
 
-              {[...expenses].reverse().slice(0, 6).map((e) => (
-                <div key={e.expense_id} className="recent-row">
-                  <span className="dot" style={{ background: getColor(e.category) }}></span>
+            <div className="quick-form" style={{ marginTop: "10px" }}>
+              <input type="number" value={budgetAmount} onChange={(e) => setBudgetAmount(e.target.value)} placeholder="Set monthly budget ₹" />
+              <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option>Food & Drinks</option>
+                <option>Transport</option>
+                <option>Shopping</option>
+                <option>Health</option>
+                <option>Entertainment</option>
+                <option>Others</option>
+              </select>
+              <button onClick={addBudget}>Set Budget</button>
+            </div>
 
-                  <div className="recent-text">
-                    <div>{e.description}</div>
-                    <small>{e.category}</small>
-                  </div>
+            <div className="grid">
+              <div>
+                <div className="card">
+                  <div className="card-title">Spending by category</div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: "140px", justifyContent: "flex-end" }}>
-                    <span>₹{e.amount}</span>
+                  {["Food & Drinks","Transport","Shopping","Health","Entertainment","Others"]
+                    .map((cat) => {
+                      const amt = byCategory[cat] || 0;
+                      if (amt === 0) return null;
 
-                    <button onClick={() => handleEdit(e)} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "3px 6px", borderRadius: "5px", fontSize: "11px", cursor: "pointer" }}>
-                      Edit
-                    </button>
+                      const budget = budgets.find(b => b.category === cat)?.monthly_limit || 0;
+                      const percent = budget ? Math.min((amt / budget) * 100, 100) : 0;
 
-                    <button onClick={() => handleDelete(e.expense_id)} style={{ background: "#ef4444", color: "#fff", border: "none", padding: "3px 8px", borderRadius: "5px", fontSize: "11px", cursor: "pointer", minWidth: "60px" }}>
-                      Delete
-                    </button>
-                  </div>
+                      return (
+                        <div key={cat} className="bar-row">
+                          <div className="bar-label">
+                            <span className="dot" style={{ background: getColor(cat) }}></span>
+                            {cat}
+                          </div>
+                          <div className="bar">
+                            <div className="fill" style={{ width: `${percent}%`, background: getColor(cat) }}></div>
+                          </div>
+                          <div>₹{amt}</div>
+                        </div>
+                      );
+                    })}
                 </div>
-              ))}
+
+                <div className="card">
+                  <div className="card-title">Weekly spending trend</div>
+
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={weeklyData}>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="value" stroke="#16a34a" strokeWidth={3} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div>
+                <div className="card">
+                  <div className="card-title">Budget tracker</div>
+
+                  {["Food & Drinks","Transport","Shopping","Health","Entertainment","Others"]
+                    .map((cat) => {
+                      const b = budgets.find((b) => b.category === cat);
+                      if (!b) return null;
+
+                      const spent = byCategory[cat] || 0;
+                      const percent = Math.min((spent / b.monthly_limit) * 100, 100);
+
+                      return (
+                        <div key={cat} className="bar-row">
+                          <div>{cat}</div>
+                          <div className="bar">
+                            <div
+                              className="fill"
+                              style={{
+                                width: `${percent}%`,
+                                background: getBudgetColor(spent, b.monthly_limit),
+                              }}
+                            ></div>
+                          </div>
+                          <div>₹{spent} / ₹{b.monthly_limit}</div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Recent transactions</div>
+
+                  {[...expenses].reverse().slice(0, 6).map((e) => (
+                    <div key={e.expense_id} className="recent-row">
+                      <span className="dot" style={{ background: getColor(e.category) }}></span>
+
+                      <div className="recent-text">
+                        <div>{e.description}</div>
+                        <small>{e.category}</small>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: "140px", justifyContent: "flex-end" }}>
+                        <span>₹{e.amount}</span>
+
+                        <button onClick={() => handleEdit(e)} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "3px 6px", borderRadius: "5px", fontSize: "11px", cursor: "pointer" }}>
+                          Edit
+                        </button>
+
+                        <button onClick={() => handleDelete(e.expense_id)} style={{ background: "#ef4444", color: "#fff", border: "none", padding: "3px 8px", borderRadius: "5px", fontSize: "11px", cursor: "pointer", minWidth: "60px" }}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
