@@ -86,7 +86,7 @@ The application follows a serverless microservices architecture on AWS:
 
 ## 🌐 Live Application
 
-👉 [Your App URL]
+👉 https://budget.techmanship.in
 
 ---
 
