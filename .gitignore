@@ -1,0 +1,32 @@
+# frontend files
+frontend/node_modules
+frontend/dist
+
+# sometimes created in root
+node_modules
+dist
+
+# env file (important)
+.env
+
+# logs
+*.log
+
+# python cache
+__pycache__/
+*.pyc
+
+# system files
+.DS_Store
+
+
+
+
+
+
+
+
+
+
+
+
